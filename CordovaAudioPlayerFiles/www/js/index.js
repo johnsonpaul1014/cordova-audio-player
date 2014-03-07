@@ -41,11 +41,14 @@ var app = {
         
         if (app.buildPlatform == 'android') audioPlayer = new CordovaAudioPlayer();
         else {
-        	audioPlayer = document.getElementById('audio-player');
-        	audioPlayer.setSrc = function(fileName) {
+        	audioPlayer = $('#audio-player')[0];
+        	
+        	$.extend(audioPlayer, {
+        		setSrc: function(fileName) {
 					if (this.canPlayType('mp3')) this.src = fileName + '.mp3';
 					else this.src = fileName + '.ogg';
-			};
+        		}
+			});
         }
         
         audioPlayer.setSrc('audio/moments-in-space');

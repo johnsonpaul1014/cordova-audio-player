@@ -27,7 +27,6 @@ function CordovaAudioPlayer() {
 	var currentMedia, mediaTimer;
 	var TIMER_INTERVAL = 50;
 	var self = this;
-	var internalSetCurrentTime = false;
 	var startedRunning = false;
 	
 	this.currentTime = 0;
@@ -36,22 +35,24 @@ function CordovaAudioPlayer() {
 	watch(this, 'currentTime', onCurrentTimeSet);
 	
 	function onCurrentTimeSet(id, oldVal, newVal) {
-		if (internalSetCurrentTime) internalSetCurrentTime = false;
-		else {
-			if (currentMedia) {
-				
-				// A seek can only happen while the media is actually running.  If it isn't yet, try this in a bit.
-				if (startedRunning) currentMedia.seekTo(newVal * 1000);
-				else setTimeout(function() {
-					onCurrentTimeSet(id, oldVal, newVal);
-				}, 50);
-			}
+		if (currentMedia) {
+			
+			// A seek can only happen while the media is actually running.  If it isn't yet, try this in a bit.
+			if (startedRunning) currentMedia.seekTo(newVal * 1000);
+			else setTimeout(function() {
+				onCurrentTimeSet(id, oldVal, newVal);
+			}, 50);
 		}
 	}
 	
+	function internalSetCurrentTime(newCurrentTime) {
+		unwatch(self, 'currentTime', onCurrentTimeSet);
+		self.currentTime = newCurrentTime;
+		watch(self, 'currentTime', onCurrentTimeSet);
+	}
+	
 	this.setSrc = function(fileName) {
-		internalSetCurrentTime = true;
-		this.currentTime = 0;		
+		internalSetCurrentTime(0);	
 		startedRunning = false;
 		
 		if (currentMedia) {
@@ -65,17 +66,18 @@ function CordovaAudioPlayer() {
 	}
 	
 	this.play = function() {
+		startedRunning = false;
+		
 		if (currentMedia) {
 			this.ended = false;
 			currentMedia.play();
 
-			mediaTimer = setInterval($.proxy(function() {
+			mediaTimer = setInterval(function() {
 				currentMedia.getCurrentPosition(
 					
 						// success
 						function(position) {
-							internalSetCurrentTime = true;
-							self.currentTime = position;
+							internalSetCurrentTime(position);
 							$(self).trigger('timeupdate');
 						},
 						
@@ -83,7 +85,7 @@ function CordovaAudioPlayer() {
 						function(e) {
 							console.log('error getting position: ' + e);
 						});
-			}, this), TIMER_INTERVAL);
+			}, TIMER_INTERVAL);
 		}
 	}
 	
